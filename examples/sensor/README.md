@@ -20,7 +20,15 @@ If you are using W5100S-EVB-Pico or W5500-EVB-Pico, you can skip '1. Combine...'
 
 3. Connect Raspberry Pi Pico, W5100S-EVB-Pico or W5500-EVB-Pico to desktop or laptop using 5 pin micro USB cable.
 
-4. Connect SHT3x or MPU6050 Module, W5100S-EVB-Pico or W5500-EVB-Pico to I2C0 SDA(GP4) SCL(GP5).
+4. Connect SHT3x or MPU6050 Modu
+5. 
+6. 
+7. 
+8. 
+9. 
+10. 
+11. 
+12. le, W5100S-EVB-Pico or W5500-EVB-Pico to I2C0 SDA(GP4) SCL(GP5).
 
 
 
