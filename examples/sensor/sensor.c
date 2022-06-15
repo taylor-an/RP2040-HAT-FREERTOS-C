@@ -39,6 +39,7 @@
 #include "hardware/i2c.h"
 #include "sht3x.h"
 #include "mpu6050.h"
+#include "lis2dh12.h"
 #include "tcp.h"
 
 /**
@@ -65,6 +66,10 @@
 #define TCP_TASK_STACK_SIZE 256+64
 #define TCP_TASK_PRIORITY 10
 #define TCP_TASK_DELAY 2000
+
+#define LIS2DH12_TASK_STACK_SIZE 128+64
+#define LIS2DH12_TASK_PRIORITY 7
+#define LIS2DH12_TASK_DELAY 2000
 
 /* Clock */
 #define PLL_SYS_KHZ (133 * 1000)
@@ -134,16 +139,25 @@ typedef struct mpu6050_message
     float gyro_z;
 } mpu6050_message;
 
+typedef struct lis2dh12_message
+{
+    float accel_x;
+    float accel_y;
+    float accel_z;
+} lis2dh12_message;
 typedef struct sensor_message
 {
     sht3x_message sht3x;
     mpu6050_message mpu6050;
+    lis2dh12_message lis2dh12;
 } sensor_message;
 
 static QueueHandle_t sht3x_queue;
 static const int sht3x_queue_len = 10;
 static QueueHandle_t mpu6050_queue;
 static const int mpu6050_queue_len = 10;
+static QueueHandle_t lis2dh12_queue;
+static const int lis2dh12_queue_len = 10;
 
 static uint8_t g_send_buf[1024] = {
     0,
@@ -160,6 +174,7 @@ void dns_task(void *argument);
 
 void sht3x_task(void *argument);
 void mpu6050_task(void *argument);
+void lis2dh12_task(void *argument);
 
 void tcp_task(void *argument);
 
@@ -221,6 +236,7 @@ int main()
 
     sht3x_queue = xQueueCreate(sht3x_queue_len, sizeof(sht3x_message));
     mpu6050_queue = xQueueCreate(mpu6050_queue_len, sizeof(mpu6050_message));
+    lis2dh12_queue = xQueueCreate(lis2dh12_queue_len, sizeof(lis2dh12_message));
 
     #if 1
     BaseType_t ret;
@@ -228,7 +244,7 @@ int main()
     printf("xTaskCreate(dhcp_task) = %d\n", ret);
     #endif
 
-    #if 0
+    #if 1
     ret = xTaskCreate(dns_task, "DNS_Task", DNS_TASK_STACK_SIZE, NULL, DNS_TASK_PRIORITY, NULL);
     printf("xTaskCreate(dns_task) = %d\n", ret);
     #endif
@@ -241,6 +257,11 @@ int main()
     #if 1
     ret = xTaskCreate(mpu6050_task, "MPU6050_Task", MPU6050_TASK_STACK_SIZE, NULL, MPU6050_TASK_PRIORITY, NULL);
     printf("xTaskCreate(mpu6050_task) = %d\n", ret);
+    #endif
+
+    #if 1
+    ret = xTaskCreate(lis2dh12_task, "LIS2DH12_Task", LIS2DH12_TASK_STACK_SIZE, NULL, LIS2DH12_TASK_PRIORITY, NULL);
+    printf("xTaskCreate(lis2dh12_task) = %d\n", ret);
     #endif
 
     #if 1
@@ -485,7 +506,7 @@ void mpu6050_task(void *argument)
             
             if(xQueueSend(mpu6050_queue, (void *)&mpu6050_data, 0)  != pdTRUE)
             {
-                printf("xQueueSend(sht3x_queue) failed\n");
+                printf("xQueueSend(mpu6050_queue) failed\n");
             }
         }
         taskEXIT_CRITICAL();
@@ -498,6 +519,76 @@ void mpu6050_task(void *argument)
     }
 }
 
+void lis2dh12_task(void *argument)
+{
+#if 0
+#define DEBUG_LIS2DH12
+#endif
+    UBaseType_t uxHighWaterMark;
+    /* Inspect our own high water mark on entering the task. */
+    uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );
+    
+    bool init_lis2dh12 = false;
+    int ret;
+    uint32_t i = 0;
+    uint32_t j = 0;
+    lis2dh12_message lis2dh12_data;
+        
+    printf("start lis2dh12_task\n");
+    
+    while(1)
+    {
+        xSemaphoreTake(sensor_sem, portMAX_DELAY);
+        taskENTER_CRITICAL();
+        if(init_lis2dh12 == false)
+        {
+            ret = imu_lis2dh12_init();
+            if(ret != 0)
+            {
+                printf("imu_lis2dh12_init() failed\n");
+            }
+            else
+            {
+                init_lis2dh12 = true;
+            }
+        }
+        else
+        {
+            float acce_x;
+            float acce_y;
+            float acce_z;
+            
+            ret = imu_lis2dh12_acquire_acce(&acce_x, &acce_y, &acce_z);
+            if(ret != 0)
+            {
+                printf("imu_lis2dh12_acquire_acce() failed");
+            }
+            else
+            {
+                #ifdef DEBUG_LIS2DH12
+                printf("accel.xyz %d\n", i++);
+                printf("%f %f %f\n", acce_x, acce_y, acce_z);
+                printf("\n");
+                #endif
+            }
+
+            lis2dh12_data.accel_x = acce_x;
+            lis2dh12_data.accel_y = acce_y;
+            lis2dh12_data.accel_z = acce_z;
+            if(xQueueSend(lis2dh12_queue, (void *)&lis2dh12_data, 0)  != pdTRUE)
+            {
+                printf("xQueueSend(lis2dh12_queue) failed\n");
+            }
+        }
+        taskEXIT_CRITICAL();
+        xSemaphoreGive(sensor_sem);
+        vTaskDelay(LIS2DH12_TASK_DELAY);
+        #if 0
+        uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );
+        printf("lis2dh12_task stack remains %ld Word\n", uxHighWaterMark);
+        #endif
+    }
+}
 void dhcp_task(void *argument)
 {
     UBaseType_t uxHighWaterMark;
@@ -669,6 +760,7 @@ void tcp_task(void *argument)
     int32_t len;
     bool got_sht3x = false;
     bool got_mpu6050 = false;
+    bool got_lis2dh12 = false;
     sensor_message sensor_data;
     int32_t sent_cnt;
     int32_t wait_cnt;
@@ -683,6 +775,9 @@ void tcp_task(void *argument)
     sensor_data.mpu6050.gyro_x = 0;
     sensor_data.mpu6050.gyro_y = 0;
     sensor_data.mpu6050.gyro_z = 0;
+    sensor_data.lis2dh12.accel_x = 0;
+    sensor_data.lis2dh12.accel_y = 0;
+    sensor_data.lis2dh12.accel_z = 0;
     
     wait_cnt = 0;
     
@@ -741,12 +836,28 @@ void tcp_task(void *argument)
                     got_mpu6050 = true;
                 }
             }
-            
-            if(got_sht3x == true && got_mpu6050 == true)
+            if(got_lis2dh12 == false)
             {
-                sprintf(g_send_buf, "%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f\n", sensor_data.sht3x.temp, sensor_data.sht3x.humi,
+                if (xQueueReceive(lis2dh12_queue, (void *)&sensor_data.lis2dh12, 0) == pdTRUE)
+                {
+                    #if 0
+                    printf("accel.x = %f\n", sensor_data.mpu6050.accel_x);
+                    printf("accel.y = %f\n", sensor_data.mpu6050.accel_y);
+                    printf("accel.z = %f\n", sensor_data.mpu6050.accel_z);
+                    
+                    printf("gyro.x = %f\n", sensor_data.mpu6050.gyro_x);
+                    printf("gyro.y = %f\n", sensor_data.mpu6050.gyro_y);
+                    printf("gyro.z = %f\n", sensor_data.mpu6050.gyro_z);
+                    #endif
+                    got_lis2dh12 = true;
+                }
+            }
+            if(got_sht3x == true && got_mpu6050 == true && got_lis2dh12 == true)
+            {
+                sprintf(g_send_buf, "%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f\n", sensor_data.sht3x.temp, sensor_data.sht3x.humi,
                 sensor_data.mpu6050.accel_x, sensor_data.mpu6050.accel_y, sensor_data.mpu6050.accel_z,
-                sensor_data.mpu6050.gyro_x, sensor_data.mpu6050.gyro_y, sensor_data.mpu6050.gyro_z
+                sensor_data.mpu6050.gyro_x, sensor_data.mpu6050.gyro_y, sensor_data.mpu6050.gyro_z,
+                sensor_data.lis2dh12.accel_x, sensor_data.lis2dh12.accel_y, sensor_data.lis2dh12.accel_z
                 );
                 len = strlen(g_send_buf);
                 
@@ -774,6 +885,7 @@ void tcp_task(void *argument)
             }
             got_sht3x = false;
             got_mpu6050 = false;
+            got_lis2dh12 = false;
         }
         vTaskDelay(TCP_TASK_DELAY);
         #if 0
