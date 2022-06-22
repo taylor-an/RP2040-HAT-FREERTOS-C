@@ -34,3 +34,20 @@ target_include_directories(TIMER_FILES PUBLIC
 target_link_libraries(TIMER_FILES PRIVATE
         pico_stdlib      
         )
+
+# sensors
+add_library(SENSORS_FILES STATIC)
+
+target_sources(SENSORS_FILES PUBLIC
+        ${PORT_DIR}/sensors/sensors.c
+        )
+
+target_include_directories(SENSORS_FILES PUBLIC
+        ${PORT_DIR}/sensors
+        ${SENSORS_DIR}
+        )
+
+target_link_libraries(SENSORS_FILES PRIVATE
+        pico_stdlib
+        hardware_i2c
+        )

@@ -59,6 +59,11 @@ if(NOT DEFINED PORT_DIR)
     message(STATUS "PORT_DIR = ${PORT_DIR}")
 endif()
 
+if(NOT DEFINED SENSORS_DIR)
+    set(SENSORS_DIR ${CMAKE_SOURCE_DIR}/libraries/sensors)
+    message(STATUS "SENSORS_DIR = ${SENSORS_DIR}")
+endif()
+
 # Turn off mbedtls test mode 
 set(ENABLE_PROGRAMS OFF CACHE BOOL "Build mbedtls programs")
 set(ENABLE_TESTING OFF CACHE BOOL "Build mbedtls testing")

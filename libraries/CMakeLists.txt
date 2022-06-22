@@ -187,3 +187,39 @@ target_include_directories(FREERTOS_FILES PUBLIC
         ${FREERTOS_DIR}/include
         ${FREERTOS_DIR}/portable/GCC/ARM_CM0
         )
+
+# SENSOR_SHT3X_FILES
+add_library(SENSOR_SHT3X_FILES STATIC)
+
+target_sources(SENSOR_SHT3X_FILES PUBLIC
+        ${SENSORS_DIR}/sht3x/sht3x.c
+        )
+
+target_include_directories(SENSOR_SHT3X_FILES PUBLIC
+        ${SENSORS_DIR}
+        ${SENSORS_DIR}/sht3x
+        )
+
+# SENSOR_MPU6050_FILES
+add_library(SENSOR_MPU6050_FILES STATIC)
+
+target_sources(SENSOR_MPU6050_FILES PUBLIC
+        ${SENSORS_DIR}/mpu6050/mpu6050.c
+        )
+
+target_include_directories(SENSOR_MPU6050_FILES PUBLIC
+        ${SENSORS_DIR}
+        ${SENSORS_DIR}/mpu6050
+        )
+
+# SENSOR_LIS2DH12_FILES
+add_library(SENSOR_LIS2DH12_FILES STATIC)
+
+target_sources(SENSOR_LIS2DH12_FILES PUBLIC
+        ${SENSORS_DIR}/lis2dh12/lis2dh12.c
+        )
+
+target_include_directories(SENSOR_LIS2DH12_FILES PUBLIC
+        ${SENSORS_DIR}
+        ${SENSORS_DIR}/lis2dh12
+        )
