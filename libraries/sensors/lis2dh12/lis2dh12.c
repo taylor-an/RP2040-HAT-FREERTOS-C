@@ -45,33 +45,7 @@ int lis2dh12_write(uint8_t* cmd, uint32_t cmdlen)
 {
     int ret;
     
-    #if 1
     ret = sensor_write(LIS2DH12_I2C_ADDRESS, cmd, cmdlen, true);
-    #else
-    ret = i2c_write_blocking(i2c_default, LIS2DH12_I2C_ADDRESS, cmd, cmdlen, true);
-    if(ret == PICO_ERROR_TIMEOUT)
-    {
-        printf("i2c_write_blocking() PICO_ERROR_TIMEOUT\n");
-        ret = -1;
-    }
-    else if(ret == PICO_ERROR_GENERIC)
-    {
-        printf("i2c_write_blocking() PICO_ERROR_GENERIC\n");
-        ret = -1;
-    }
-    else if(ret == PICO_ERROR_NO_DATA)
-    {
-        printf("i2c_write_blocking() PICO_ERROR_NO_DATA\n");
-        ret = -1;
-    }
-    else
-    {
-#ifdef LOG_ERR_ALL
-        printf("i2c_write_blocking() ret %d\n", ret);
-#endif
-        ret = 0;
-    }
-    #endif
 
     return ret;
 }
@@ -80,58 +54,13 @@ int lis2dh12_read(uint8_t* cmd, uint32_t cmdlen, uint8_t* data, uint32_t datalen
 {
     int ret;
     
-    #if 1
     ret = sensor_write(LIS2DH12_I2C_ADDRESS, cmd, cmdlen, true);
-    ret = sensor_read(LIS2DH12_I2C_ADDRESS, data, datalen, false);
-    #else
-    ret = i2c_write_blocking(i2c_default, LIS2DH12_I2C_ADDRESS, cmd, cmdlen, true);
-    if(ret == PICO_ERROR_TIMEOUT)
+    if(ret != 0)
     {
-        printf("i2c_write_blocking() PICO_ERROR_TIMEOUT\n");
-        ret = -1;
-    }
-    else if(ret == PICO_ERROR_GENERIC)
-    {
-        printf("i2c_write_blocking() PICO_ERROR_GENERIC\n");
-        ret = -1;
-    }
-    else if(ret == PICO_ERROR_NO_DATA)
-    {
-        printf("i2c_write_blocking() PICO_ERROR_NO_DATA\n");
-        ret = -1;
-    }
-    else
-    {
-#ifdef LOG_ERR_ALL
-        printf("i2c_write_blocking() ret %d\n", ret);
-#endif
-        ret = 0;
+      return ret;
     }
     
-    ret = i2c_read_blocking(i2c_default, LIS2DH12_I2C_ADDRESS, data, datalen, false);
-    if(ret == PICO_ERROR_TIMEOUT)
-    {
-        printf("i2c_read_blocking() PICO_ERROR_TIMEOUT\n");
-        ret = -1;
-    }
-    else if(ret == PICO_ERROR_GENERIC)
-    {
-        printf("i2c_read_blocking() PICO_ERROR_GENERIC\n");
-        ret = -1;
-    }
-    else if(ret == PICO_ERROR_NO_DATA)
-    {
-        printf("i2c_read_blocking() PICO_ERROR_NO_DATA\n");
-        ret = -1;
-    }
-    else
-    {
-#ifdef LOG_ERR_ALL
-        printf("i2c_read_blocking() ret %d\n", ret);
-#endif
-        ret = 0;
-    }
-    #endif
+    ret = sensor_read(LIS2DH12_I2C_ADDRESS, data, datalen, false);
 
     return ret;
 }

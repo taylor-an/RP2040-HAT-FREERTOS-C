@@ -27,73 +27,21 @@
 static int sht3x_write_cmd(sht3x_cmd_measure_t sht3x_cmd, bool nostop)
 {
     uint8_t cmd_buffer[2];
+    int ret;
+
     cmd_buffer[0] = sht3x_cmd >> 8;
     cmd_buffer[1] = sht3x_cmd;
 
-#if 1
-    int ret;
     ret = sensor_write(SHT3x_ADDR_PIN_SELECT_VSS, cmd_buffer, 2, nostop);
-#else
-    int ret = i2c_write_blocking(i2c_default, SHT3x_ADDR_PIN_SELECT_VSS, cmd_buffer, 2, nostop);
-    
-    if(ret == PICO_ERROR_TIMEOUT)
-    {
-        printf("sht3x_write_cmd() PICO_ERROR_TIMEOUT\n");
-        ret = -1;
-    }
-    else if(ret == PICO_ERROR_GENERIC)
-    {
-        printf("sht3x_write_cmd() PICO_ERROR_GENERIC\n");
-        ret = -1;
-    }
-    else if(ret == PICO_ERROR_NO_DATA)
-    {
-        printf("sht3x_write_cmd() PICO_ERROR_NO_DATA\n");
-        ret = -1;
-    }
-    else
-    {
-#ifdef LOG_ERR_ALL
-        printf("sht3x_write_cmd() ret %d\n", ret);
-#endif
-        ret = 0;
-    }
-#endif
     
     return ret;
 }
 
 static int sht3x_get_data(uint8_t data_len, uint8_t *data_arr)
 {
-#if 1
     int ret;
-    ret = sensor_read(SHT3x_ADDR_PIN_SELECT_VSS, data_arr, data_len, false);
-#else
-    int ret = i2c_read_blocking(i2c_default, SHT3x_ADDR_PIN_SELECT_VSS, data_arr, data_len, false);
 
-    if(ret == PICO_ERROR_TIMEOUT)
-    {
-        printf("sht3x_get_data() PICO_ERROR_TIMEOUT\n");
-        ret = -1;
-    }
-    else if(ret == PICO_ERROR_GENERIC)
-    {
-        printf("sht3x_get_data() PICO_ERROR_GENERIC\n");
-        ret = -1;
-    }
-    else if(ret == PICO_ERROR_NO_DATA)
-    {
-        printf("sht3x_get_data() PICO_ERROR_NO_DATA\n");
-        ret = -1;
-    }
-    else
-    {
-#ifdef LOG_ERR_ALL
-        printf("sht3x_get_data() ret %d\n", ret);
-#endif
-        ret = 0;
-    }
-#endif
+    ret = sensor_read(SHT3x_ADDR_PIN_SELECT_VSS, data_arr, data_len, false);
     
     return ret;
 }

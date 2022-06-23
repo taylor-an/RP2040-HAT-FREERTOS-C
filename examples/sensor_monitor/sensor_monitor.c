@@ -41,6 +41,7 @@
 #include "mpu6050.h"
 #include "lis2dh12.h"
 #include "tcp.h"
+#include "sensors.h"
 
 /**
  * ----------------------------------------------------------------------------------------------------
@@ -214,25 +215,7 @@ int main()
 
     wizchip_1ms_timer_initialize(repeating_timer_callback);
 
-#if !defined(i2c_default) || !defined(PICO_DEFAULT_I2C_SDA_PIN) || !defined(PICO_DEFAULT_I2C_SCL_PIN)
-#warning i2c/bus_scan example requires a board with I2C pins
-    puts("Default I2C pins were not defined");
-#else
-    printf("PICO_DEFAULT_I2C %d\n", PICO_DEFAULT_I2C);
-    printf("PICO_DEFAULT_I2C_SDA_PIN %d\n", PICO_DEFAULT_I2C_SDA_PIN);
-    printf("PICO_DEFAULT_I2C_SCL_PIN %d\n", PICO_DEFAULT_I2C_SCL_PIN);
-
-
-    // This example will use I2C0 on the default SDA and SCL pins (GP4, GP5 on a Pico)
-    i2c_init(i2c_default, 100 * 1000);
-    gpio_set_function(PICO_DEFAULT_I2C_SDA_PIN, GPIO_FUNC_I2C);
-    gpio_set_function(PICO_DEFAULT_I2C_SCL_PIN, GPIO_FUNC_I2C);
-    gpio_pull_up(PICO_DEFAULT_I2C_SDA_PIN);
-    gpio_pull_up(PICO_DEFAULT_I2C_SCL_PIN);
-    
-    // Make the I2C pins available to picotool
-    bi_decl(bi_2pins_with_func(PICO_DEFAULT_I2C_SDA_PIN, PICO_DEFAULT_I2C_SCL_PIN, GPIO_FUNC_I2C));
-#endif
+    sensor_init();
 
     sht3x_queue = xQueueCreate(sht3x_queue_len, sizeof(sht3x_message));
     mpu6050_queue = xQueueCreate(mpu6050_queue_len, sizeof(mpu6050_message));
