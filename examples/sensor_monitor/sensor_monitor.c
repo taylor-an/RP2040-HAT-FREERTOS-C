@@ -48,6 +48,11 @@
  * Macros
  * ----------------------------------------------------------------------------------------------------
  */
+
+#define SENSOR_USE_SHT3X    1
+#define SENSOR_USE_MPU6050  1
+#define SENSOR_USE_LIS2DH12 1
+
 /* Task */
 // Size = STACK_SIZE * 4(WORD) ??
 #define DHCP_TASK_STACK_SIZE 256
@@ -56,21 +61,27 @@
 #define DNS_TASK_STACK_SIZE 128+64
 #define DNS_TASK_PRIORITY 10
 
-#define SHT3X_TASK_STACK_SIZE 128+64
-#define SHT3X_TASK_PRIORITY 7
-#define SHT3X_TASK_DELAY 2000
-
-#define MPU6050_TASK_STACK_SIZE 128+64
-#define MPU6050_TASK_PRIORITY 7
-#define MPU6050_TASK_DELAY 2000
-
 #define TCP_TASK_STACK_SIZE 256+64
 #define TCP_TASK_PRIORITY 10
 #define TCP_TASK_DELAY 2000
 
+#if SENSOR_USE_SHT3X == 1
+#define SHT3X_TASK_STACK_SIZE 128+64
+#define SHT3X_TASK_PRIORITY 7
+#define SHT3X_TASK_DELAY 2000
+#endif
+
+#if SENSOR_USE_MPU6050 == 1
+#define MPU6050_TASK_STACK_SIZE 128+64
+#define MPU6050_TASK_PRIORITY 7
+#define MPU6050_TASK_DELAY 2000
+#endif
+
+#if SENSOR_USE_LIS2DH12 == 1
 #define LIS2DH12_TASK_STACK_SIZE 128+64
 #define LIS2DH12_TASK_PRIORITY 7
 #define LIS2DH12_TASK_DELAY 2000
+#endif
 
 /* Clock */
 #define PLL_SYS_KHZ (133 * 1000)
@@ -124,12 +135,15 @@ static xSemaphoreHandle sensor_sem = NULL;
 /* Timer  */
 static volatile uint32_t g_msec_cnt = 0;
 
+#if SENSOR_USE_SHT3X == 1
 typedef struct sht3x_message
 {
     float temp;
     float humi;
 } sht3x_message;
+#endif
 
+#if SENSOR_USE_MPU6050 == 1
 typedef struct mpu6050_message
 {
     float accel_x;
@@ -139,26 +153,46 @@ typedef struct mpu6050_message
     float gyro_y;
     float gyro_z;
 } mpu6050_message;
+#endif
 
+#if SENSOR_USE_LIS2DH12 == 1
 typedef struct lis2dh12_message
 {
     float accel_x;
     float accel_y;
     float accel_z;
 } lis2dh12_message;
+#endif
+
 typedef struct sensor_message
 {
+    #if SENSOR_USE_SHT3X == 1
     sht3x_message sht3x;
+    #endif
+
+    #if SENSOR_USE_MPU6050 == 1
     mpu6050_message mpu6050;
+    #endif
+
+    #if SENSOR_USE_LIS2DH12 == 1
     lis2dh12_message lis2dh12;
+    #endif
 } sensor_message;
 
+#if SENSOR_USE_SHT3X == 1
 static QueueHandle_t sht3x_queue;
 static const int sht3x_queue_len = 10;
+#endif
+
+#if SENSOR_USE_MPU6050 == 1
 static QueueHandle_t mpu6050_queue;
 static const int mpu6050_queue_len = 10;
+#endif
+
+#if SENSOR_USE_LIS2DH12 == 1
 static QueueHandle_t lis2dh12_queue;
 static const int lis2dh12_queue_len = 10;
+#endif
 
 static uint8_t g_send_buf[1024] = {
     0,
@@ -173,9 +207,15 @@ static uint8_t g_send_buf[1024] = {
 void dhcp_task(void *argument);
 void dns_task(void *argument);
 
+#if SENSOR_USE_SHT3X == 1
 void sht3x_task(void *argument);
+#endif
+#if SENSOR_USE_MPU6050 == 1
 void mpu6050_task(void *argument);
+#endif
+#if SENSOR_USE_LIS2DH12 == 1
 void lis2dh12_task(void *argument);
+#endif
 
 void tcp_task(void *argument);
 
@@ -217,9 +257,15 @@ int main()
 
     sensor_init();
 
+    #if SENSOR_USE_SHT3X == 1
     sht3x_queue = xQueueCreate(sht3x_queue_len, sizeof(sht3x_message));
+    #endif
+    #if SENSOR_USE_MPU6050 == 1
     mpu6050_queue = xQueueCreate(mpu6050_queue_len, sizeof(mpu6050_message));
+    #endif
+    #if SENSOR_USE_LIS2DH12 == 1
     lis2dh12_queue = xQueueCreate(lis2dh12_queue_len, sizeof(lis2dh12_message));
+    #endif
 
     #if 1
     BaseType_t ret;
@@ -232,17 +278,17 @@ int main()
     printf("xTaskCreate(dns_task) = %d\n", ret);
     #endif
     
-    #if 1
+    #if SENSOR_USE_SHT3X == 1
     ret = xTaskCreate(sht3x_task, "SHT3X_Task", SHT3X_TASK_STACK_SIZE, NULL, SHT3X_TASK_PRIORITY, NULL);
     printf("xTaskCreate(sht3x_task) = %d\n", ret);
     #endif
     
-    #if 1
+    #if SENSOR_USE_MPU6050 == 1
     ret = xTaskCreate(mpu6050_task, "MPU6050_Task", MPU6050_TASK_STACK_SIZE, NULL, MPU6050_TASK_PRIORITY, NULL);
     printf("xTaskCreate(mpu6050_task) = %d\n", ret);
     #endif
 
-    #if 1
+    #if SENSOR_USE_LIS2DH12 == 1
     ret = xTaskCreate(lis2dh12_task, "LIS2DH12_Task", LIS2DH12_TASK_STACK_SIZE, NULL, LIS2DH12_TASK_PRIORITY, NULL);
     printf("xTaskCreate(lis2dh12_task) = %d\n", ret);
     #endif
@@ -271,6 +317,7 @@ int main()
  * ----------------------------------------------------------------------------------------------------
  */
 
+#if SENSOR_USE_SHT3X == 1
 void sht3x_task(void *argument)
 {
 #if 1
@@ -407,8 +454,9 @@ void sht3x_task(void *argument)
 
     }
 }
+#endif
 
-#if 1
+#if SENSOR_USE_MPU6050 == 1
 void mpu6050_task(void *argument)
 {
 #if 0
@@ -502,8 +550,9 @@ void mpu6050_task(void *argument)
         #endif
     }
 }
+#endif
 
-#if 1
+#if SENSOR_USE_LIS2DH12 == 1
 void lis2dh12_task(void *argument)
 {
 #if 0
@@ -575,7 +624,7 @@ void lis2dh12_task(void *argument)
     }
 }
 #endif
-#endif
+
 void dhcp_task(void *argument)
 {
     UBaseType_t uxHighWaterMark;
@@ -745,26 +794,38 @@ void tcp_task(void *argument)
     int ret;
     bool init_tcp = false;
     int32_t len;
+    #if SENSOR_USE_SHT3X == 1
     bool got_sht3x = false;
+    #endif
+    #if SENSOR_USE_MPU6050 == 1
     bool got_mpu6050 = false;
+    #endif
+    #if SENSOR_USE_LIS2DH12 == 1
     bool got_lis2dh12 = false;
+    #endif
     sensor_message sensor_data;
     int32_t sent_cnt;
     int32_t wait_cnt;
     
     printf("start tcp_task\n");
     
+    #if SENSOR_USE_SHT3X == 1
     sensor_data.sht3x.temp = 0;
     sensor_data.sht3x.humi = 0;
+    #endif
+    #if SENSOR_USE_MPU6050 == 1
     sensor_data.mpu6050.accel_x = 0;
     sensor_data.mpu6050.accel_y = 0;
     sensor_data.mpu6050.accel_z = 0;
     sensor_data.mpu6050.gyro_x = 0;
     sensor_data.mpu6050.gyro_y = 0;
     sensor_data.mpu6050.gyro_z = 0;
+    #endif
+    #if SENSOR_USE_LIS2DH12 == 1
     sensor_data.lis2dh12.accel_x = 0;
     sensor_data.lis2dh12.accel_y = 0;
     sensor_data.lis2dh12.accel_z = 0;
+    #endif
     
     wait_cnt = 0;
     
@@ -790,11 +851,14 @@ void tcp_task(void *argument)
                     init_tcp = false;
                 }
             }
+            #if 0
             else
             {
                 memset(g_send_buf, 0, sizeof(g_send_buf));
             }
+            #endif
             
+            #if SENSOR_USE_SHT3X == 1
             if(got_sht3x == false)
             {
                 if (xQueueReceive(sht3x_queue, (void *)&sensor_data.sht3x, 0) == pdTRUE)
@@ -806,7 +870,9 @@ void tcp_task(void *argument)
                     got_sht3x = true;
                 }
             }
+            #endif
             
+            #if SENSOR_USE_MPU6050 == 1
             if(got_mpu6050 == false)
             {
                 if (xQueueReceive(mpu6050_queue, (void *)&sensor_data.mpu6050, 0) == pdTRUE)
@@ -823,6 +889,9 @@ void tcp_task(void *argument)
                     got_mpu6050 = true;
                 }
             }
+            #endif
+
+            #if SENSOR_USE_LIS2DH12 == 1
             if(got_lis2dh12 == false)
             {
                 if (xQueueReceive(lis2dh12_queue, (void *)&sensor_data.lis2dh12, 0) == pdTRUE)
@@ -839,74 +908,84 @@ void tcp_task(void *argument)
                     got_lis2dh12 = true;
                 }
             }
-            #if 0
-            if(got_sht3x == true && got_mpu6050 == true)
-            {
-                sprintf(g_send_buf, "%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f\n", sensor_data.sht3x.temp, sensor_data.sht3x.humi,
-                sensor_data.mpu6050.accel_x, sensor_data.mpu6050.accel_y, sensor_data.mpu6050.accel_z,
-                sensor_data.mpu6050.gyro_x, sensor_data.mpu6050.gyro_y, sensor_data.mpu6050.gyro_z,
-                sensor_data.lis2dh12.accel_x, sensor_data.lis2dh12.accel_y, sensor_data.lis2dh12.accel_z
-                );
-                len = strlen(g_send_buf);
-                
-                if(init_tcp == true)
-                {
-                    printf("send to client %d %s", sent_cnt++, g_send_buf);
-                    ret = tcps_send(SOCKET_TCP, g_send_buf, len);
-                    if(ret < 0)
-                    {
-                        printf("send error : %d\n", ret);
-                        init_tcp = false;
-                    }
-                    else if(ret != 0)
-                    {
-                        if(ret != len)
-                        {
-                            printf("sent %d/%d\n", ret, len);
-                        }
-                    }
-                }
-                else
-                {
-                    printf("got datas %s", g_send_buf);
-                }
-            }
-            #else
-            if(got_sht3x == true && got_mpu6050 == true || got_lis2dh12 == true)
-            {
-                sprintf(g_send_buf, "%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f\n", sensor_data.sht3x.temp, sensor_data.sht3x.humi,
-                sensor_data.mpu6050.accel_x, sensor_data.mpu6050.accel_y, sensor_data.mpu6050.accel_z,
-                sensor_data.mpu6050.gyro_x, sensor_data.mpu6050.gyro_y, sensor_data.mpu6050.gyro_z,
-                sensor_data.lis2dh12.accel_x, sensor_data.lis2dh12.accel_y, sensor_data.lis2dh12.accel_z
-                );
-                len = strlen(g_send_buf);
-                
-                if(init_tcp == true)
-                {
-                    printf("send to client %d %s", sent_cnt++, g_send_buf);
-                    ret = tcps_send(SOCKET_TCP, g_send_buf, len);
-                    if(ret < 0)
-                    {
-                        printf("send error : %d\n", ret);
-                        init_tcp = false;
-                    }
-                    else if(ret != 0)
-                    {
-                        if(ret != len)
-                        {
-                            printf("sent %d/%d\n", ret, len);
-                        }
-                    }
-                }
-                else
-                {
-                    printf("got datas %s", g_send_buf);
-                }
-            }
             #endif
+
+            if(
+                #if SENSOR_USE_SHT3X == 1
+                got_sht3x == true
+                #else
+                1
+                #endif
+                #if SENSOR_USE_MPU6050 == 1
+                && got_mpu6050 == true
+                #endif
+                #if SENSOR_USE_LIS2DH12 == 1
+                && got_lis2dh12 == true
+                #endif
+             )
+            {
+                memset(g_send_buf, 0, sizeof(g_send_buf));
+
+                #if SENSOR_USE_SHT3X == 1
+                sprintf(g_send_buf, "%.2f,%.2f",
+                sensor_data.sht3x.temp, sensor_data.sht3x.humi);
+                #endif
+
+                #if SENSOR_USE_MPU6050 == 1
+                if(strlen(g_send_buf) != 0)
+                {
+                    sprintf(g_send_buf+strlen(g_send_buf), ",");
+                }
+                sprintf(g_send_buf+strlen(g_send_buf), "%.2f,%.2f,%.2f,%.2f,%.2f,%.2f",
+                sensor_data.mpu6050.accel_x, sensor_data.mpu6050.accel_y, sensor_data.mpu6050.accel_z,
+                sensor_data.mpu6050.gyro_x, sensor_data.mpu6050.gyro_y, sensor_data.mpu6050.gyro_z);
+                #endif
+
+                #if SENSOR_USE_LIS2DH12 == 1
+                if(strlen(g_send_buf) != 0)
+                {
+                    sprintf(g_send_buf+strlen(g_send_buf), ",");
+                }
+                sprintf(g_send_buf+strlen(g_send_buf), "%.2f,%.2f,%.2f",
+                sensor_data.lis2dh12.accel_x, sensor_data.lis2dh12.accel_y, sensor_data.lis2dh12.accel_z);
+                #endif
+
+                sprintf(g_send_buf+strlen(g_send_buf), "\n");
+
+                len = strlen(g_send_buf);
+                
+                if(init_tcp == true)
+                {
+                    printf("send to client %d %s", sent_cnt++, g_send_buf);
+                    ret = tcps_send(SOCKET_TCP, g_send_buf, len);
+                    if(ret < 0)
+                    {
+                        printf("send error : %d\n", ret);
+                        init_tcp = false;
+                    }
+                    else if(ret != 0)
+                    {
+                        if(ret != len)
+                        {
+                            printf("sent %d/%d\n", ret, len);
+                        }
+                    }
+                }
+                else
+                {
+                    printf("got datas %s", g_send_buf);
+                }
+            }
+
+            #if SENSOR_USE_SHT3X == 1
             got_sht3x = false;
+            #endif
+            #if SENSOR_USE_MPU6050 == 1
             got_mpu6050 = false;
+            #endif
+            #if SENSOR_USE_LIS2DH12 == 1
             got_lis2dh12 = false;
+            #endif
         }
         vTaskDelay(TCP_TASK_DELAY);
         #if 0
